@@ -5,7 +5,36 @@ MAINTAINER KiwenLau <kiwenlau@gmail.com>
 WORKDIR /root
 
 # install openssh-server, openjdk and wget
-RUN apt-get update && apt-get install -y openssh-server openjdk-7-jdk wget
+RUN apt-get update && apt-get install -y openssh-server openjdk-7-jdk wget openssl libreadline6 libreadline6-dev curl git-core
+
+#========================
+# Install Zsh
+#========================
+RUN git clone git://github.com/robbyrussell/oh-my-zsh.git ~/.oh-my-zsh \
+    && cp ~/.oh-my-zsh/templates/zshrc.zsh-template ~/.zshrc \
+    && chsh -s /bin/zsh
+
+RUN sed -i -E "s/^plugins=\((.*)\)$/plugins=(\1 git git-flow ruby )/" ~/.zshrc  
+RUN echo "export TERM=vt100" >> ~/.zshrc
+
+# bindkey to make HOME/END works on zsh shell
+# set term=xtern make HOME/END works in vim
+RUN echo "alias ls='ls --color=auto'" >> ~/.zshrc && \
+    echo "alias ll='ls -halF'" >> ~/.zshrc && \
+    echo "bindkey -v" >> ~/.zshrc && \
+    echo "bindkey '\eOH'  beginning-of-line" >> ~/.zshrc && \
+    echo "bindkey '\eOF'  end-of-line" >> ~/.zshrc && \
+    echo "alias ls='ls --color=auto'" >> /etc/profile &&\
+    echo "set term=xterm" >> ~/.vimrc 
+
+
+#========================
+# Add user
+#========================
+RUN useradd -m -d /home/deploy -s /bin/zsh deploy  \
+    && echo "deploy:deploy" | chpasswd \
+    && echo "deploy ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
 
 # install hadoop 2.7.2
 RUN wget https://github.com/kiwenlau/compile-hadoop/releases/download/2.7.2/hadoop-2.7.2.tar.gz && \
@@ -46,5 +75,4 @@ RUN chmod +x ~/start-hadoop.sh && \
 # format namenode
 RUN /usr/local/hadoop/bin/hdfs namenode -format
 
-CMD [ "sh", "-c", "service ssh start; bash"]
-
+CMD [ "sh", "-c", "service ssh start; sh"]
